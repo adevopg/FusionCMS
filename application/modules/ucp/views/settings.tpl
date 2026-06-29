@@ -22,6 +22,18 @@
 							<input class="form-control" type="text" id="location_field" name="location_field" placeholder="{lang("location", "ucp")}" value="{$location}">
 						</div>
 					</div>
+
+					{if $twilio_enabled}
+					<div class="form-group row">
+						<label class="col-sm-3 col-form-label">{lang("phone", "ucp")}</label>
+						<div class="col-sm-9">
+							<div class="input-group">
+								<input class="form-control" type="text" id="phone_field" value="{$phone_masked}" readonly>
+								<button type="button" class="btn btn-secondary" onClick="Settings.changePhone()">{lang("phone_change", "ucp")}</button>
+							</div>
+						</div>
+					</div>
+					{/if}
 					
 					{if $show_language_chooser}
 						<div class="form-group row">

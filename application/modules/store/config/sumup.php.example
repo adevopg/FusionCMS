@@ -1,0 +1,29 @@
+<?php
+
+/**
+ * SumUp payment configuration (real-money checkout for BattlePay products).
+ *
+ * Two auth options:
+ *  - API key (secret key, "sup_sk_..."): set $sumup_api_key, leave client_id/secret empty.
+ *  - OAuth2 client credentials: set $sumup_client_id + $sumup_client_secret (a token
+ *    is fetched automatically via the client_credentials grant).
+ *
+ * Copy this file to sumup.php and fill in your real credentials.
+ * sumup.php is gitignored so secrets never get committed.
+ */
+
+$config['sumup_enabled'] = false;
+
+// Merchant code of your SumUp account (e.g. "MABCDEFG")
+$config['sumup_merchant_code'] = '';
+
+// --- Authentication (use ONE of the two) ---
+$config['sumup_api_key'] = '';        // secret API key, sent as Bearer
+$config['sumup_client_id'] = '';      // OAuth2 client id
+$config['sumup_client_secret'] = '';  // OAuth2 client secret
+
+// Currency for the charge (BattlePay prices are in EUR)
+$config['sumup_currency'] = 'EUR';
+
+// API base (no trailing slash)
+$config['sumup_api_base'] = 'https://api.sumup.com';

@@ -5,7 +5,7 @@
  * Enable captcha for site
  *
  */
-$config['use_captcha'] = true;
+$config['use_captcha'] = false;
 
 /**
  *
@@ -17,14 +17,14 @@ $config['use_captcha'] = true;
  * 'fusion_captcha'  = inbuilt captcha system
  *
  */
-$config['captcha_type'] = 'fusion_captcha';
+$config['captcha_type'] = 'image_captcha';
 
 /**
  *
  * After how many tries should a captcha pop up?
  *
  */
-$config['captcha_attemps'] = 3;
+$config['captcha_attemps'] = 999999;
 
 /**
  *
@@ -32,7 +32,7 @@ $config['captcha_attemps'] = 3;
  * How many minutes should an IP address remain blocked?
  *
  */
-$config['block_attemps'] = 5;
+$config['block_attemps'] = 999999;
 $config['block_duration'] = 15;
 
 /**
@@ -41,7 +41,7 @@ $config['block_duration'] = 15;
  * get site key @ www.google.com/recaptcha/admin
  *
  */
-$config["recaptcha_site_key"] = "";
+$config['recaptcha_site_key'] = false;
 
 /**
  *
@@ -49,7 +49,7 @@ $config["recaptcha_site_key"] = "";
  * get secret key @ www.google.com/recaptcha/admin
  *
  */
-$config["recaptcha_secret_key"] = "";
+$config['recaptcha_secret_key'] = false;
 
 // Theme
 $config['recaptcha_theme'] = 'dark'; // dark - light

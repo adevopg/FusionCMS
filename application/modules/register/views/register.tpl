@@ -22,6 +22,25 @@
                     <input class="form-control" type="password" name="register_password_confirm" autocomplete="new-password" id="register_password_confirm" value="{set_value('register_password_confirm')}" onChange="Validate.checkPasswordConfirm()"/>
                     <span id="password_confirm_error">{$password_confirm_error}</span>
                 </div>
+                {if $CI->config->item('twilio_enabled')}
+                <div class="mb-3">
+                    <label for="register_phone">{lang("phone", "register")}</label>
+                    <div class="input-group">
+                        <input class="form-control" type="text" name="register_phone" id="register_phone" placeholder="+34600000000" value="{set_value('register_phone')}" />
+                        <button type="button" class="btn btn-secondary" id="sms_send_btn" onClick="SMS.send()">{lang("sms_send", "register")}</button>
+                    </div>
+                    <span id="phone_error"></span>
+                </div>
+                <div class="mb-3" id="sms_code_row" style="display:none;">
+                    <label for="register_sms_code">{lang("sms_code", "register")}</label>
+                    <div class="input-group">
+                        <input class="form-control" type="text" name="register_sms_code" id="register_sms_code" inputmode="numeric" />
+                        <button type="button" class="btn btn-secondary" id="sms_verify_btn" onClick="SMS.verify()">{lang("sms_verify", "register")}</button>
+                    </div>
+                    <span id="sms_status"></span>
+                </div>
+                {/if}
+
                 <div class="mb-3">
                 {if $use_captcha}
                     {if $captcha_type == 'image_captcha'}
@@ -55,9 +74,54 @@
                 {/if}
                 </div>
                 <div class="form-group text-center mt-4">
-                    <button class="card-footer nice_button" type="submit" name="login_submit">{lang("submit", "register")}</button>
+                    <button class="card-footer nice_button" type="submit" name="login_submit" id="register_submit">{lang("submit", "register")}</button>
                 </div>
             {form_close()}
         </div>
     </div>
 </div>
+
+{if $CI->config->item('twilio_enabled')}
+<script type="text/javascript">
+var SMS = {
+    sent: false,
+    verified: false,
+
+    init: function() {
+        // Require SMS verification before allowing account creation
+        $("#register_submit").prop("disabled", true);
+    },
+
+    send: function() {
+        var phone = $("#register_phone").val();
+        $("#phone_error").text("");
+        $.post(Config.URL + "register/sendCode", { phone: phone, csrf_token_name: Config.CSRF }, function(data) {
+            var r; try { r = JSON.parse(data); } catch(e){ r = {}; }
+            if (r.ok) {
+                SMS.sent = true;
+                $("#sms_code_row").slideDown(150);
+                $("#sms_status").css("color", "").text("{lang('sms_sent', 'register')}");
+            } else {
+                $("#phone_error").css("color", "#dc3545").text(r.error || "Error");
+            }
+        });
+    },
+
+    verify: function() {
+        var code = $("#register_sms_code").val();
+        $.post(Config.URL + "register/verifyCode", { code: code, csrf_token_name: Config.CSRF }, function(data) {
+            var r; try { r = JSON.parse(data); } catch(e){ r = {}; }
+            if (r.ok) {
+                SMS.verified = true;
+                $("#register_submit").prop("disabled", false);
+                $("#sms_status").css("color", "#198754").text("{lang('sms_ok', 'register')}");
+                $("#sms_verify_btn, #register_sms_code").prop("disabled", true);
+            } else {
+                $("#sms_status").css("color", "#dc3545").text(r.error || "Error");
+            }
+        });
+    }
+};
+$(function(){ SMS.init(); });
+</script>
+{/if}

@@ -110,6 +110,43 @@ class User
     }
 
     /**
+     * Establish a session for a game account that has already been authenticated
+     * out-of-band (e.g. via Battle.net email login). No password check is performed.
+     *
+     * @param String $username game account username
+     * @return Int 0 on success, 1 if the account does not exist
+     */
+    public function loginVerified(string $username): int
+    {
+        $check = $this->CI->external_account_model->initialize(strtoupper($username));
+
+        if (!$check) {
+            return 1;
+        }
+
+        $this->CI->internal_user_model->initialize($this->CI->external_account_model->getId());
+
+        $userdata = [
+            'uid' => $this->CI->external_account_model->getId(),
+            'username' => $this->CI->external_account_model->getUsername(),
+            'password' => $this->CI->external_account_model->getPassword(),
+            'email' => $this->CI->external_account_model->getEmail(),
+            'expansion' => $this->CI->external_account_model->getExpansion(),
+            'online' => true,
+            'register_date' => preg_replace("/\s.*/", "", $this->CI->external_account_model->getJoinDate()),
+            'last_ip' => $this->CI->external_account_model->getLastIp(),
+            'nickname' => $this->CI->internal_user_model->getNickname(),
+            'language' => $this->CI->internal_user_model->getLanguage(),
+        ];
+
+        Services::session()->set($userdata);
+
+        $this->getUserData();
+
+        return 0;
+    }
+
+    /**
      * Check if the user rank has any staff permissions
      *
      * @param int|bool $id

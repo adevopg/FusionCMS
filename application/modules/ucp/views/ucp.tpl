@@ -18,6 +18,13 @@
 							<td>{$email}</td>
 							<td class="text-end"><a href="{$url}ucp/settings">{lang("edit", "ucp")}</a></td>
 						</tr>
+						{if $twilio_enabled}
+						<tr>
+							<td><div class="user-table-icon"><i class="fa-duotone fa-mobile"></i></div> {lang("phone", "ucp")}</td>
+							<td>{if $phone}{$phone}{else}<span class="text-muted">&mdash;</span>{/if}</td>
+							<td class="text-end"><a href="{$url}ucp/settings">{lang("edit", "ucp")}</a></td>
+						</tr>
+						{/if}
 						<tr>
 							<td><div class="user-table-icon"><i class="fa-duotone fa-key"></i></div> {lang("password", "ucp")}</td>
 							<td>********</td>

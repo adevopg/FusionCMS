@@ -1,0 +1,26 @@
+<?php
+
+if (!defined('BASEPATH')) {
+    exit('No direct script access allowed');
+}
+
+/**
+ * Twilio Verify (SMS) configuration.
+ *
+ * Used to require an SMS code when creating an account (and as 2FA on login).
+ * Twilio Verify manages the code generation, expiry and rate-limiting.
+ *
+ * Copy this file to twilio.php and fill in your real credentials.
+ * twilio.php is gitignored so secrets never get committed.
+ */
+
+$config['twilio_enabled'] = false;
+
+$config['twilio_account_sid'] = '';
+$config['twilio_auth_token']  = '';
+
+// Verify Service SID (VA...). Created via the Twilio API for this site.
+$config['twilio_verify_service_sid'] = '';
+
+// Require the SMS code as a second factor on login (for accounts with a verified phone)
+$config['twilio_login_2fa'] = false;

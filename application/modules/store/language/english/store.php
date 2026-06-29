@@ -140,3 +140,41 @@ $lang['item_group'] = "Item Group";
 $lang['none'] = "None";
 $lang['vp_price'] = "VP Price";
 $lang['dp_price'] = "DP Price";
+
+// Generic (used by BattlePay admin)
+$lang['save'] = "Save";
+$lang['cancel'] = "Cancel";
+$lang['description'] = "Description";
+$lang['price'] = "Price";
+
+// BattlePay catalog admin
+$lang['battlepay'] = "BattlePay";
+$lang['battlepay_add'] = "Add product";
+$lang['battlepay_category'] = "Category";
+$lang['battlepay_category_hint'] = "Type a new category or pick an existing one. Categories become the store groups.";
+$lang['battlepay_price'] = "Price";
+$lang['battlepay_icon'] = "Icon";
+$lang['battlepay_icon_hint'] = "WoW icon name (e.g. inv_misc_gift_02) or a full image URL. Leave empty for the default.";
+$lang['battlepay_enabled'] = "Enabled";
+$lang['battlepay_toggle'] = "Click to enable/disable";
+$lang['battlepay_on'] = "Enabled";
+$lang['battlepay_off'] = "Disabled";
+$lang['battlepay_empty'] = "No BattlePay products found.";
+$lang['battlepay_no_product'] = "There is no BattlePay product with ID";
+$lang['battlepay_name_required'] = "The product name can't be empty.";
+
+// SumUp payment
+$lang['sumup_pay'] = "Pay with card";
+$lang['sumup_disabled'] = "Card payment is not available.";
+$lang['sumup_zero_amount'] = "The cart total must be greater than zero.";
+$lang['sumup_create_failed'] = "Could not start the payment. Please try again.";
+$lang['sumup_paid'] = "Payment received. Thank you!";
+$lang['sumup_pending'] = "Payment not completed yet.";
+$lang['sumup_need_character'] = "Please choose a character to receive the products.";
+$lang['sumup_bad_character'] = "That character does not belong to your account.";
+$lang['sumup_character_title'] = "Deliver to character";
+$lang['sumup_character_ph'] = "Character name";
+
+// BattlePay in-game delivery
+$lang['battlepay_delivery'] = "Delivery command (SOAP)";
+$lang['battlepay_delivery_hint'] = "Console command run on the worldserver when paid. Use \$character (and \$account). Example: send items \$character \"Store\" \"Thanks\" 49426:1. Leave empty for no auto-delivery.";

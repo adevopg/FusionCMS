@@ -776,3 +776,97 @@ var Store = {
 		}
 	}
 }
+
+/**
+ * SumUp card payment for BattlePay products (real money, EUR).
+ */
+var StoreSumUp = {
+
+	pay: function()
+	{
+		if (!Store.Cart.list || Store.Cart.list.length === 0) {
+			Swal.fire({ title: lang('empty_cart', 'store') || 'Cart empty', icon: 'info' });
+			return;
+		}
+
+		// Ask the buyer which character should receive the products
+		Swal.fire({
+			title: lang('sumup_character_title', 'store') || 'Character',
+			input: 'text',
+			inputPlaceholder: lang('sumup_character_ph', 'store') || 'Character name',
+			showCancelButton: true,
+			confirmButtonText: lang('sumup_pay', 'store') || 'Pay'
+		}).then(function(res) {
+			if (!res.isConfirmed || !res.value) { return; }
+			var character = res.value;
+
+			$.post(Config.URL + "store/sumup/create", { cart: JSON.stringify(Store.Cart.list), character: character, csrf_token_name: Config.CSRF }, function(data) {
+				var resp;
+				try { resp = JSON.parse(data); } catch (e) { Swal.fire({ title: 'Error', text: data, icon: 'error' }); return; }
+
+				if (resp.error) { Swal.fire({ title: 'Error', text: resp.error, icon: 'error' }); return; }
+
+				StoreSumUp.mount(resp.id, resp.amount, resp.currency);
+			});
+		});
+	},
+
+	mount: function(checkoutId, amount, currency)
+	{
+		$("#sumup-modal").remove();
+		$("body").append(
+			'<div id="sumup-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;">' +
+				'<div style="background:#1b1b1b;padding:22px;border-radius:12px;max-width:440px;width:95%;">' +
+					'<h4 style="color:#fff;margin-bottom:14px;">' + amount + ' ' + currency + '</h4>' +
+					'<div id="sumup-card"></div>' +
+					'<button class="nice_button" style="margin-top:12px;" onclick="$(\'#sumup-modal\').remove()">' + (lang('cancel', 'store') || 'Cancel') + '</button>' +
+				'</div>' +
+			'</div>'
+		);
+
+		var go = function() {
+			SumUpCard.mount({
+				id: 'sumup-card',
+				checkoutId: checkoutId,
+				onResponse: function(type, body) {
+					// 'sent'/'success' => payment submitted; verify server-side
+					if (type === 'sent' || type === 'success') {
+						StoreSumUp.confirm(checkoutId);
+					} else if (type === 'error') {
+						Swal.fire({ title: 'Error', icon: 'error' });
+					}
+				}
+			});
+		};
+
+		if (window.SumUpCard) {
+			go();
+		} else {
+			var s = document.createElement('script');
+			s.src = 'https://gateway.sumup.com/gateway/ecom/card/v2/sdk.js';
+			s.onload = go;
+			document.head.appendChild(s);
+		}
+	},
+
+	confirm: function(checkoutId)
+	{
+		$.post(Config.URL + "store/sumup/confirm", { checkout_id: checkoutId, csrf_token_name: Config.CSRF }, function(data) {
+			var resp;
+			try { resp = JSON.parse(data); } catch (e) { resp = {}; }
+
+			$("#sumup-modal").remove();
+
+			if (resp.paid) {
+				Swal.fire({ title: 'OK', text: resp.message, icon: 'success' });
+				Store.Cart.list = [];
+				$("#cart_item_count").html('0');
+				$("#cart_items").empty();
+				$("#empty_cart").fadeIn(150);
+				$("#cart_price").fadeOut(150);
+			} else {
+				Swal.fire({ title: resp.status || 'Pending', text: resp.message || '', icon: 'info' });
+			}
+		});
+	}
+};

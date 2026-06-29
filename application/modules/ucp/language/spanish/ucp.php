@@ -23,6 +23,23 @@ $lang['change_nickname'] = "Cambiar Apodo";
 $lang['username'] = "Nombre de usuario";
 
 $lang['location'] = "Ubicación";
+
+// Teléfono (SMS)
+$lang['phone'] = "Teléfono";
+$lang['phone_change'] = "Cambiar teléfono";
+$lang['phone_change_new'] = "Nuevo número de teléfono";
+$lang['phone_send_to_old'] = "Se enviará un código a tu teléfono actual para confirmar que eres tú.";
+$lang['phone_code_old'] = "Código enviado a tu teléfono actual";
+$lang['phone_code_new'] = "Código enviado al nuevo teléfono";
+$lang['phone_changed'] = "Número de teléfono actualizado";
+$lang['phone_no_current'] = "Aún no tienes un número de teléfono.";
+$lang['phone_need_old'] = "Verifica primero tu teléfono actual.";
+$lang['phone_bad'] = "Introduce un número válido (ej. +34600000000).";
+$lang['phone_same'] = "El nuevo número es igual que el actual.";
+$lang['phone_in_use'] = "Ese número de teléfono ya está registrado en otra cuenta.";
+$lang['phone_send_failed'] = "No se pudo enviar el SMS. Revisa el número e inténtalo de nuevo.";
+$lang['phone_invalid_code'] = "Código no válido o caducado.";
+$lang['phone_disabled'] = "La verificación por SMS no está disponible.";
 $lang['change_location'] = "Cambiar Ubicación";
 
 $lang['email'] = "Correo Electrónico";

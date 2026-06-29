@@ -7,8 +7,18 @@
             </br>
 
             <div class="input-group p-0 flex-row">
-                <label for="floatingUser" class="input-group-text" id="username" style="width:45px;"><i class="fa-duotone fa-user"></i></label>
-                <input type="text" class="form-control username-input border-0" id="floatingUser" placeholder="{lang('login_label_user', 'auth')}" aria-describedby="username">
+                {if $battle_net}
+                    <label for="floatingUser" class="input-group-text" id="username" style="width:45px;"><i class="fa-duotone fa-envelope"></i></label>
+                    <input type="email" autocomplete="email" class="form-control username-input border-0" id="floatingUser" placeholder="{lang('login_label_bnet', 'auth')}" aria-describedby="username">
+                {else}
+                    <label for="floatingUser" class="input-group-text" id="username" style="width:45px;"><i class="fa-duotone fa-user"></i></label>
+                    <input type="text" class="form-control username-input border-0" id="floatingUser" placeholder="{lang('login_label_user', 'auth')}" aria-describedby="username">
+                {/if}
+            </div>
+
+            <div class="game-account-field d-none mt-3">
+                <label for="gameAccountSelect" class="form-label small mb-1">{lang('login_label_select_account', 'auth')}</label>
+                <select class="form-select game-account-select" id="gameAccountSelect"></select>
             </div>
 
             <div class="input-group p-0 mt-3 flex-row">

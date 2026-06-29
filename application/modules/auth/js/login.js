@@ -4,6 +4,33 @@ var Auth = {
 	useRecaptcha: false,
 	useRecaptcha3: false,
 	useFusionCaptcha: false,
+	smsCode: "",
+
+	// Battle.net: populate the dropdown of game accounts (e.g. 1#1, 1#2) for the user to pick
+	renderAccountChooser: function(accounts) {
+		var $select = $(".game-account-select").empty();
+
+		if(!accounts || accounts.length === 0) {
+			$("<option>", {
+				value: "",
+				text: "No game accounts",
+				disabled: true,
+				selected: true
+			}).appendTo($select);
+			$select.prop("disabled", true);
+		} else {
+			$select.prop("disabled", false);
+			accounts.forEach(function(acc) {
+				$("<option>", {
+					value: acc.id,
+					text: acc.label + " — " + acc.username
+				}).appendTo($select);
+			});
+		}
+
+		$(".game-account-field").removeClass("d-none");
+		$(".error-feedback").addClass("d-none").removeClass("d-block");
+	},
 
 	login: function(submit = false) {
 		var postData = {
@@ -11,6 +38,8 @@ var Auth = {
 			"password": $(".password-input").val(),
 			"remember": $(".remember-check").is(":checked"),
 			"captcha": $(".captcha-input").val(),
+			"game_account": $(".game-account-select").val() || "",
+			"sms_code": Auth.smsCode || "",
 			"submit": submit,
 		};
 
@@ -43,6 +72,62 @@ var Auth = {
 
 					if(data["redirect"] === true) {
 						window.location.href = Config.URL + "ucp";
+						return;
+					}
+
+					// Battle.net: multiple game accounts -> let the user pick one
+					if(data["selectAccount"]) {
+						Auth.renderAccountChooser(data["selectAccount"]);
+						return;
+					}
+
+					// SMS enrolment: account has no phone -> must register one before login
+					if(data["enroll_phone"]) {
+						var enrollErr = (data["messages"] && data["messages"]["error"]) ? data["messages"]["error"] : "";
+						Swal.fire({
+							title: lang('login_phone_title', 'auth') || 'Register your phone',
+							text: enrollErr || (lang('login_phone_text', 'auth') || ''),
+							input: 'tel',
+							inputPlaceholder: '+34600000000',
+							showCancelButton: true,
+							confirmButtonText: lang('login_send_code', 'auth') || 'Send code'
+						}).then(function(p) {
+							if (!p.isConfirmed || !p.value) { return; }
+							$.post(Config.URL + "auth/sendLoginCode", { phone: p.value, csrf_token_name: Config.CSRF }, function(d) {
+								var rr; try { rr = JSON.parse(d); } catch(e) { rr = {}; }
+								if (!rr.ok) { Swal.fire({ title: 'Error', text: rr.error || '', icon: 'error' }); return; }
+								Swal.fire({
+									title: lang('login_sms_title', 'auth') || 'SMS code',
+									input: 'text',
+									inputAttributes: { inputmode: 'numeric', autocomplete: 'one-time-code' },
+									inputPlaceholder: lang('login_sms_ph', 'auth') || 'Code',
+									showCancelButton: true
+								}).then(function(c) {
+									if (c.isConfirmed && c.value) { Auth.smsCode = c.value; Auth.login(true); }
+								});
+							});
+						});
+						return;
+					}
+
+					// SMS 2FA: an SMS code was sent, ask the user for it
+					if(data["sms_required"]) {
+						var errMsg = (data["messages"] && data["messages"]["error"]) ? data["messages"]["error"] : "";
+						Swal.fire({
+							title: lang('login_sms_title', 'auth') || 'SMS code',
+							text: errMsg,
+							input: 'text',
+							inputAttributes: { inputmode: 'numeric', autocomplete: 'one-time-code' },
+							inputPlaceholder: lang('login_sms_ph', 'auth') || 'Code',
+							showCancelButton: true
+						}).then(function(r) {
+							if (r.isConfirmed && r.value) {
+								Auth.smsCode = r.value;
+								Auth.login(true);
+							} else {
+								Auth.smsCode = "";
+							}
+						});
 						return;
 					}
 

@@ -16,3 +16,7 @@ install/.lock
 /vendor/ezyang/htmlpurifier/library/HTMLPurifier/DefinitionCache/
 /vendor/**/.git
 /.idea/
+
+# Local secrets — copy the matching .example file and fill in real credentials
+/application/config/twilio.php
+/application/modules/store/config/sumup.php

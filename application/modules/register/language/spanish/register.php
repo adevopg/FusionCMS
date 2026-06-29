@@ -14,6 +14,29 @@
 
 $lang['account_creation'] = "Creación de cuenta";
 $lang['register'] = "Registrarse";
+$lang['gameaccount_title'] = "Añadir cuenta de juego";
+$lang['gameaccount_intro'] = "Has iniciado sesión con tu cuenta Battle.net. Se creará automáticamente una nueva cuenta de juego enlazada a ella, sin pedir más datos.";
+$lang['gameaccount_bnet'] = "Cuenta Battle.net";
+$lang['gameaccount_new'] = "Nueva cuenta de juego";
+$lang['gameaccount_button'] = "Crear cuenta de juego";
+$lang['gameaccount_created'] = "Tu nueva cuenta de juego ha sido creada:";
+$lang['gameaccount_back'] = "Volver al panel";
+$lang['gameaccount_no_bnet'] = "Tu cuenta no está enlazada a una cuenta Battle.net.";
+
+// Verificación SMS (Twilio)
+$lang['phone'] = "Número de teléfono";
+$lang['sms_send'] = "Enviar código";
+$lang['sms_verify'] = "Verificar";
+$lang['sms_code'] = "Código SMS";
+$lang['sms_sent'] = "Código enviado. Revisa tu teléfono.";
+$lang['sms_ok'] = "Teléfono verificado ✓";
+$lang['sms_required'] = "Introduce el código SMS.";
+$lang['sms_invalid'] = "Código no válido o caducado.";
+$lang['sms_not_verified'] = "Verifica tu teléfono por SMS primero.";
+$lang['sms_disabled'] = "La verificación por SMS no está disponible.";
+$lang['sms_bad_phone'] = "Introduce un número válido (ej. +34600000000).";
+$lang['sms_send_failed'] = "No se pudo enviar el SMS. Revisa el número e inténtalo de nuevo.";
+$lang['sms_phone_in_use'] = "Ese número de teléfono ya está registrado en otra cuenta.";
 $lang['username_limit_length'] = "El nombre de usuario debe tener entre 4 y 24 caracteres";
 $lang['username_limit'] = "El nombre de usuario solo puede contener caracteres alfabéticos y numéricos";
 $lang['username_not_available'] = "El nombre de usuario no está disponible";

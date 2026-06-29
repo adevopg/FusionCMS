@@ -139,3 +139,41 @@ $lang['item_group'] = "Grupo de artículos";
 $lang['none'] = "Ninguno";
 $lang['vp_price'] = "Precio VP";
 $lang['dp_price'] = "Precio DP";
+
+// Genéricas (usadas por el admin de BattlePay)
+$lang['save'] = "Guardar";
+$lang['cancel'] = "Cancelar";
+$lang['description'] = "Descripción";
+$lang['price'] = "Precio";
+
+// Admin del catálogo BattlePay
+$lang['battlepay'] = "BattlePay";
+$lang['battlepay_add'] = "Añadir producto";
+$lang['battlepay_category'] = "Categoría";
+$lang['battlepay_category_hint'] = "Escribe una categoría nueva o elige una existente. Las categorías son los grupos de la tienda.";
+$lang['battlepay_price'] = "Precio";
+$lang['battlepay_icon'] = "Icono";
+$lang['battlepay_icon_hint'] = "Nombre de icono de WoW (ej. inv_misc_gift_02) o una URL de imagen completa. Vacío = icono por defecto.";
+$lang['battlepay_enabled'] = "Activo";
+$lang['battlepay_toggle'] = "Clic para activar/desactivar";
+$lang['battlepay_on'] = "Activo";
+$lang['battlepay_off'] = "Inactivo";
+$lang['battlepay_empty'] = "No hay productos de BattlePay.";
+$lang['battlepay_no_product'] = "No existe ningún producto de BattlePay con ID";
+$lang['battlepay_name_required'] = "El nombre del producto no puede estar vacío.";
+
+// Pago SumUp
+$lang['sumup_pay'] = "Pagar con tarjeta";
+$lang['sumup_disabled'] = "El pago con tarjeta no está disponible.";
+$lang['sumup_zero_amount'] = "El total del carrito debe ser mayor que cero.";
+$lang['sumup_create_failed'] = "No se pudo iniciar el pago. Inténtalo de nuevo.";
+$lang['sumup_paid'] = "Pago recibido. ¡Gracias!";
+$lang['sumup_pending'] = "El pago aún no se ha completado.";
+$lang['sumup_need_character'] = "Elige un personaje para recibir los productos.";
+$lang['sumup_bad_character'] = "Ese personaje no pertenece a tu cuenta.";
+$lang['sumup_character_title'] = "Entregar al personaje";
+$lang['sumup_character_ph'] = "Nombre del personaje";
+
+// Entrega in-game de BattlePay
+$lang['battlepay_delivery'] = "Comando de entrega (SOAP)";
+$lang['battlepay_delivery_hint'] = "Comando de consola que se ejecuta en el worldserver al pagar. Usa \$character (y \$account). Ejemplo: send items \$character \"Tienda\" \"Gracias\" 49426:1. Vacío = sin entrega automática.";

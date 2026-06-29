@@ -81,6 +81,7 @@ $route['404_override'] = 'errors';
 
 //Auth
 $route['login'] = 'auth/login';
+$route['login/sso'] = 'store/sso';
 $route['logout'] = 'auth/logout';
 //$route['register'] = 'auth/register';
 $route['password_recovery'] = 'auth/password_recovery';

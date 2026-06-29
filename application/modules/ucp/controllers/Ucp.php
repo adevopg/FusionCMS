@@ -117,6 +117,19 @@ class Ucp extends MX_Controller
             $data['email'] = $this->mask_email($this->user->getEmail());
         }
 
+        // Registered phone (SMS) — masked. Stored on battlenet_accounts.phone.
+        $this->load->config('twilio');
+        $this->load->library('twilio');
+        $this->load->model('external_account_model');
+        $data['twilio_enabled'] = $this->twilio->enabled();
+        $data['phone'] = false;
+
+        $ph = $this->external_account_model->getPhoneByAccount($this->user->getId());
+        if ($ph !== '')
+        {
+            $data['phone'] = $this->mask_phone($ph);
+        }
+
         $this->template->view($this->template->loadPage("page.tpl", [
             "module" => "default",
             "headline" => lang("user_panel", "ucp"),
@@ -157,5 +170,14 @@ class Ucp extends MX_Controller
         $mail_parts[0] = substr($mail_parts[0], 0, 2).str_repeat('*', 5).substr($mail_parts[0], $len - 1, 2); // show first 2 letters and last 1 letter
 
         return implode("@", $mail_parts);
+    }
+
+    private function mask_phone($phone)
+    {
+        $len = strlen($phone);
+        if ($len <= 5) {
+            return $phone;
+        }
+        return substr($phone, 0, 3) . str_repeat('*', $len - 5) . substr($phone, -2);
     }
 }

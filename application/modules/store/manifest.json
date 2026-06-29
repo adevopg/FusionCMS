@@ -67,7 +67,14 @@
 					"controller": "admin_items",
 					"requirePermission": "canViewItems"
 				},
-				
+
+				{
+					"text": "BattlePay",
+					"icon": "shopping-cart",
+					"controller": "admin_battlepay",
+					"requirePermission": "canViewItems"
+				},
+
 				{
 					"text": "Orders",
 					"icon": "users",

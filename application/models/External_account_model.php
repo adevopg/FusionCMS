@@ -699,4 +699,243 @@ class External_account_model extends CI_Model
         }
         return array($hash, $battleData);
     }
+
+    /**
+     * Authenticate a Battle.net account by email/password (website login when battle_net is enabled)
+     * and return the linked game accounts.
+     *
+     * @param string $email
+     * @param string $password
+     * @return array|false  ['bnet_id'=>int, 'accounts'=>[['id','username','index','label'], ...]] or false
+     */
+    public function loginByBattlenet(string $email, string $password)
+    {
+        $this->connect();
+
+        $emailUpper = strtoupper($email);
+
+        $bnet = $this->connection->table(table("battlenet_accounts"))
+            ->where(column("battlenet_accounts", "email"), $emailUpper)
+            ->get()->getRowArray();
+
+        if (!$bnet) {
+            return false;
+        }
+
+        $encryption    = $this->config->item('battle_net_encryption');
+        $storedSalt     = $bnet[column("battlenet_accounts", "salt")] ?? null;
+        $storedVerifier = $bnet[column("battlenet_accounts", "verifier")] ?? null;
+
+        if ($encryption == 'SRP6_V2') {
+            $hash = $this->crypto->BnetSRP6_V2($email, $password, $storedSalt);
+            $ok   = is_string($storedVerifier) && hash_equals($storedVerifier, $hash['verifier']);
+        } else if ($encryption == 'SRP6_V1') {
+            $hash = $this->crypto->BnetSRP6_V1($email, $password, $storedSalt);
+            $ok   = is_string($storedVerifier) && hash_equals($storedVerifier, $hash['verifier']);
+        } else { // SPH
+            $hash      = $this->crypto->SHA_PASS_HASH_V2($email, $password);
+            $storedSha = $bnet[column("battlenet_accounts", "sha_pass_hash")] ?? '';
+            $ok        = strtoupper((string)$storedSha) === strtoupper((string)$hash['verifier']);
+        }
+
+        if (!$ok) {
+            return false;
+        }
+
+        $bnetId = $bnet[column("battlenet_accounts", "id")];
+
+        $rows = $this->connection->table(table("account"))
+            ->select(column("account", "id") . ', ' . column("account", "username") . ', battlenet_index')
+            ->where('battlenet_account', $bnetId)
+            ->orderBy('battlenet_index', 'ASC')
+            ->get()->getResultArray();
+
+        $accounts = [];
+        foreach ($rows as $r) {
+            $accounts[] = [
+                'id'       => $r[column("account", "id")],
+                'username' => $r[column("account", "username")],
+                'index'    => $r['battlenet_index'],
+                'label'    => $bnetId . '#' . $r['battlenet_index'],
+            ];
+        }
+
+        return [
+            'bnet_id'  => $bnetId,
+            'accounts' => $accounts,
+        ];
+    }
+
+    /**
+     * Get the Battle.net id and email linked to a game account.
+     *
+     * @param int $accountId
+     * @return array|false ['bnet_id'=>int, 'email'=>string] or false if not linked
+     */
+    public function getBattlenetInfo($accountId)
+    {
+        $this->connect();
+
+        $row = $this->connection->table(table("account"))
+            ->select('battlenet_account')
+            ->where(column("account", "id"), $accountId)
+            ->get()->getRowArray();
+
+        if (!$row || empty($row['battlenet_account'])) {
+            return false;
+        }
+
+        $bnetId = $row['battlenet_account'];
+
+        $bnet = $this->connection->table(table("battlenet_accounts"))
+            ->select(column("battlenet_accounts", "email"))
+            ->where(column("battlenet_accounts", "id"), $bnetId)
+            ->get()->getRowArray();
+
+        return [
+            'bnet_id' => $bnetId,
+            'email'   => $bnet ? $bnet[column("battlenet_accounts", "email")] : '',
+        ];
+    }
+
+    /**
+     * Next available game-account index (the #N part) for a Battle.net account.
+     *
+     * @param int $bnetId
+     * @return int
+     */
+    public function getNextGameIndex($bnetId): int
+    {
+        $this->connect();
+
+        $row = $this->connection->table(table("account"))
+            ->selectMax('battlenet_index', 'maxidx')
+            ->where('battlenet_account', $bnetId)
+            ->get()->getRowArray();
+
+        return ($row && $row['maxidx'] !== null) ? ((int)$row['maxidx'] + 1) : 1;
+    }
+
+    /**
+     * Create an additional game account ("bnetId#index") under an existing Battle.net account.
+     * No email/password is requested: the account name is generated and a random game password is set
+     * (website login is handled through the Battle.net email).
+     *
+     * @param int $bnetId
+     * @param string $email
+     * @return array ['username'=>string, 'index'=>int, 'label'=>string]
+     */
+    public function createGameAccount($bnetId, string $email): array
+    {
+        $this->connect();
+
+        $encryption = $this->config->item('account_encryption');
+        $expansion  = $this->config->item('max_expansion');
+        $nextIndex  = $this->getNextGameIndex($bnetId);
+        $username   = $bnetId . '#' . $nextIndex;
+        $password   = bin2hex(random_bytes(8));
+
+        $data = [
+            column("account", "username") => $username,
+            column("account", "email")    => $email,
+            column("account", "expansion") => $expansion,
+            column("account", "joindate") => date("Y-m-d H:i:s"),
+        ];
+
+        list($hash, $data) = $this->setAccountPassword($encryption, $username, $password, $data);
+
+        if (!preg_match("/^cmangos/i", get_class($this->realms->getEmulator()))) {
+            $data[column("account", "last_ip")] = $this->input->ip_address();
+        }
+
+        $data['battlenet_account'] = $bnetId;
+        $data['battlenet_index']   = $nextIndex;
+
+        $this->connection->table(table("account"))->insert($data);
+
+        return [
+            'username' => $username,
+            'index'    => $nextIndex,
+            'label'    => $username,
+        ];
+    }
+
+    /*
+    | -------------------------------------------------------------------
+    |  Phone number (stored on battlenet_accounts.phone, per Battle.net account)
+    | -------------------------------------------------------------------
+    */
+
+    /**
+     * Resolve the Battle.net account id linked to a game account.
+     */
+    private function bnetIdOfAccount($accountId): int
+    {
+        $this->connect();
+        $row = $this->connection->query(
+            "SELECT battlenet_account FROM " . table('account') . " WHERE " . column('account', 'id') . " = ? LIMIT 1",
+            [$accountId]
+        )->getRowArray();
+
+        return (int) ($row['battlenet_account'] ?? 0);
+    }
+
+    /**
+     * Get the phone of the Battle.net account linked to a game account ('' if none).
+     */
+    public function getPhoneByAccount($accountId): string
+    {
+        $this->connect();
+        $row = $this->connection->query(
+            "SELECT b.phone AS phone FROM " . table('account') . " a JOIN " . table('battlenet_accounts') . " b ON b." . column('battlenet_accounts', 'id') . " = a.battlenet_account WHERE a." . column('account', 'id') . " = ? LIMIT 1",
+            [$accountId]
+        )->getRowArray();
+
+        return ($row && !empty($row['phone'])) ? $row['phone'] : '';
+    }
+
+    /**
+     * Set the phone on the Battle.net account linked to a game account.
+     */
+    public function setPhoneByAccount($accountId, string $phone): bool
+    {
+        $bnetId = $this->bnetIdOfAccount($accountId);
+        if (!$bnetId) {
+            return false;
+        }
+
+        $this->connection->query(
+            "UPDATE " . table('battlenet_accounts') . " SET phone = ? WHERE " . column('battlenet_accounts', 'id') . " = ?",
+            [$phone, $bnetId]
+        );
+
+        return true;
+    }
+
+    /**
+     * Whether a phone is already registered on another Battle.net account.
+     */
+    public function phoneInUse(string $phone, $exceptAccountId = 0): bool
+    {
+        if ($phone === '') {
+            return false;
+        }
+
+        $this->connect();
+
+        $sql    = "SELECT COUNT(*) AS c FROM " . table('battlenet_accounts') . " WHERE phone = ?";
+        $params = [$phone];
+
+        if ($exceptAccountId) {
+            $exceptBnet = $this->bnetIdOfAccount($exceptAccountId);
+            if ($exceptBnet) {
+                $sql     .= " AND " . column('battlenet_accounts', 'id') . " != ?";
+                $params[] = $exceptBnet;
+            }
+        }
+
+        $row = $this->connection->query($sql, $params)->getRowArray();
+
+        return ((int) ($row['c'] ?? 0)) > 0;
+    }
 }

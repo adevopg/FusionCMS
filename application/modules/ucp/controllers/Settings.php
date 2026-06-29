@@ -24,6 +24,33 @@ class Settings extends MX_Controller
         $this->load->library('form_validation');
 
         $this->load->helper('cookie');
+
+        $this->load->config('twilio');
+        $this->load->library('twilio');
+        $this->load->model('external_account_model');
+    }
+
+    /**
+     * Current verified phone for the logged-in account (or '').
+     */
+    private function currentPhone(): string
+    {
+        return $this->external_account_model->getPhoneByAccount($this->user->getId());
+    }
+
+    /**
+     * Mask a phone for display: +34******66
+     */
+    private function maskPhone(string $phone): string
+    {
+        if ($phone === '') {
+            return '';
+        }
+        $len = strlen($phone);
+        if ($len <= 5) {
+            return $phone;
+        }
+        return substr($phone, 0, 3) . str_repeat('*', max(0, $len - 5)) . substr($phone, -2);
     }
 
     public function index()
@@ -40,8 +67,16 @@ class Settings extends MX_Controller
 
         $this->template->setTitle(lang("settings", "ucp"));
 
+        clientLang("phone_change_new", "ucp");
+        clientLang("phone_code_old", "ucp");
+        clientLang("phone_code_new", "ucp");
+        clientLang("phone_changed", "ucp");
+        clientLang("phone_send_to_old", "ucp");
+
         $settings_data = [
             'nickname' => $this->user->getNickname(),
+            'twilio_enabled' => $this->twilio->enabled(),
+            'phone_masked' => $this->maskPhone($this->currentPhone()),
             'location' => $this->internal_user_model->getLocation(),
             'show_language_chooser' => $this->config->item('show_language_chooser'),
             'userLanguage' => $this->language->getLanguage(),
@@ -76,6 +111,111 @@ class Settings extends MX_Controller
 
         //Load the template form
         $this->template->view($page, "modules/ucp/css/ucp.css", "modules/ucp/js/settings.js");
+    }
+
+    /* ----------------------------------------------------------------
+     |  Change phone number — requires SMS of BOTH the current and the
+     |  new number (Twilio Verify). AJAX, step by step.
+     | ---------------------------------------------------------------- */
+
+    private function phoneInUse(string $phone): bool
+    {
+        return $this->external_account_model->phoneInUse($phone, $this->user->getId());
+    }
+
+    private function ajaxGuard(): void
+    {
+        if (!$this->input->is_ajax_request()) {
+            die('No direct script access allowed');
+        }
+        if (!$this->twilio->enabled()) {
+            die(json_encode(['ok' => false, 'error' => lang('phone_disabled', 'ucp')]));
+        }
+    }
+
+    /** Step 1: send a code to the CURRENT phone. */
+    public function phoneSendOld()
+    {
+        $this->ajaxGuard();
+
+        $current = $this->currentPhone();
+        if ($current === '') {
+            die(json_encode(['ok' => false, 'error' => lang('phone_no_current', 'ucp')]));
+        }
+
+        if (!$this->twilio->start($current)) {
+            die(json_encode(['ok' => false, 'error' => lang('phone_send_failed', 'ucp')]));
+        }
+
+        Services::session()->set('chgphone_old_ok', false);
+        die(json_encode(['ok' => true]));
+    }
+
+    /** Step 2: verify the CURRENT phone code. */
+    public function phoneVerifyOld()
+    {
+        $this->ajaxGuard();
+
+        $current = $this->currentPhone();
+        if ($current === '' || !$this->twilio->check($current, (string) $this->input->post('code'))) {
+            die(json_encode(['ok' => false, 'error' => lang('phone_invalid_code', 'ucp')]));
+        }
+
+        Services::session()->set('chgphone_old_ok', true);
+        die(json_encode(['ok' => true]));
+    }
+
+    /** Step 3: send a code to the NEW phone. */
+    public function phoneSendNew()
+    {
+        $this->ajaxGuard();
+
+        if (!Services::session()->get('chgphone_old_ok')) {
+            die(json_encode(['ok' => false, 'error' => lang('phone_need_old', 'ucp')]));
+        }
+
+        $new = $this->twilio->normalize((string) $this->input->post('phone'));
+
+        if (strlen(preg_replace('/\D/', '', $new)) < 6) {
+            die(json_encode(['ok' => false, 'error' => lang('phone_bad', 'ucp')]));
+        }
+        if ($new === $this->currentPhone()) {
+            die(json_encode(['ok' => false, 'error' => lang('phone_same', 'ucp')]));
+        }
+        if ($this->phoneInUse($new)) {
+            die(json_encode(['ok' => false, 'error' => lang('phone_in_use', 'ucp')]));
+        }
+        if (!$this->twilio->start($new)) {
+            die(json_encode(['ok' => false, 'error' => lang('phone_send_failed', 'ucp')]));
+        }
+
+        Services::session()->set('chgphone_new', $new);
+        die(json_encode(['ok' => true]));
+    }
+
+    /** Step 4: verify the NEW phone code and save it. */
+    public function phoneVerifyNew()
+    {
+        $this->ajaxGuard();
+
+        $new = (string) Services::session()->get('chgphone_new');
+
+        if (!Services::session()->get('chgphone_old_ok') || $new === '') {
+            die(json_encode(['ok' => false, 'error' => lang('phone_need_old', 'ucp')]));
+        }
+        if (!$this->twilio->check($new, (string) $this->input->post('code'))) {
+            die(json_encode(['ok' => false, 'error' => lang('phone_invalid_code', 'ucp')]));
+        }
+        if ($this->phoneInUse($new)) {
+            die(json_encode(['ok' => false, 'error' => lang('phone_in_use', 'ucp')]));
+        }
+
+        $this->external_account_model->setPhoneByAccount($this->user->getId(), $new);
+
+        Services::session()->remove(['chgphone_old_ok', 'chgphone_new']);
+        $this->dblogger->createLog("user", "settings", "Changed phone number");
+
+        die(json_encode(['ok' => true, 'phone_masked' => $this->maskPhone($new)]));
     }
 
     public function submit()

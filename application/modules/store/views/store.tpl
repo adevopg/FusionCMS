@@ -97,7 +97,7 @@
 															{foreach from=$group.items item=item}
 															<div class="store_item row p-2 border rounded mb-2" id="item_{$item.id}">
 																<div class="col-md-1 mt-1">
-																	<img class="item_icon img-responsive rounded" src="{$CI->config->item('api_item_icons')}/medium/{$item.icon}.jpg" align="absmiddle" {if $item.tooltip}data-realm="{$item.realm}" rel="item={$item.itemid}"{/if}>{if $item.itemcount > 1 && !preg_match("/,/", $item.itemcount)}<span class="wh-icon-text" data-type="number">{$item.itemcount}</span>{/if}
+																	<img class="item_icon img-responsive rounded" src="{if $item.icon|substr:0:4 == 'http'}{$item.icon}{else}{$CI->config->item('api_item_icons')}/medium/{$item.icon}.jpg{/if}" align="absmiddle" {if $item.tooltip}data-realm="{$item.realm}" rel="item={$item.itemid}"{/if}>{if $item.itemcount > 1 && !preg_match("/,/", $item.itemcount)}<span class="wh-icon-text" data-type="number">{$item.itemcount}</span>{/if}
 																</div>
 																<div class="col-md-5 mt-1">
 																	<a {if $item.tooltip}href="{$url}item/{$item.realm}/{$item.itemid}" data-realm="{$item.realm}" rel="item={$item.itemid}"{/if} class="item_name q{$item.quality} align-self-center">
@@ -146,7 +146,7 @@
 													{/if}
 											</div>
 					
-											<img class="item_icon" src="{$CI->config->item('api_item_icons')}/medium/{$item.icon}.jpg" align="absmiddle" {if $item.tooltip}data-realm="{$item.realm}" rel="item={$item.itemid}"{/if}>
+											<img class="item_icon" src="{if $item.icon|substr:0:4 == 'http'}{$item.icon}{else}{$CI->config->item('api_item_icons')}/medium/{$item.icon}.jpg{/if}" align="absmiddle" {if $item.tooltip}data-realm="{$item.realm}" rel="item={$item.itemid}"{/if}>
 											<a {if $item.tooltip}href="{$url}item/{$item.realm}/{$item.itemid}" data-realm="{$item.realm}" rel="item={$item.itemid}"{/if} class="item_name q{$item.quality}">
 												{character_limiter($item.name, 20)}
 											</a>
@@ -180,7 +180,11 @@
 										</div>
 
 										<div class="ms-auto p-1">
-											<a href="javascript:void(0)" onClick="Store.Cart.checkout(this)" class="nice_button">{lang("checkout", "store")}</a>
+											{if $CI->config->item('sumup_enabled') && $CI->config->item('store_use_battlepay')}
+												<a href="javascript:void(0)" onClick="StoreSumUp.pay()" class="nice_button"><span class="fa-duotone fa-credit-card"></span> {lang("sumup_pay", "store")}</a>
+											{else}
+												<a href="javascript:void(0)" onClick="Store.Cart.checkout(this)" class="nice_button">{lang("checkout", "store")}</a>
+											{/if}
 										</div>
 									</div>
 								</div>

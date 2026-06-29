@@ -16,8 +16,10 @@ class Register extends MX_Controller
     {
         parent::__construct();
 
-        // Make sure that we are not logged in yet
-        $this->user->guestArea();
+        // Make sure that we are not logged in yet — except Battle.net users adding an extra game account
+        if (!($this->user->isOnline() && $this->config->item('battle_net'))) {
+            $this->user->guestArea();
+        }
 
         requirePermission("view");
 
@@ -32,10 +34,19 @@ class Register extends MX_Controller
 
         $this->load->config('activation');
         $this->load->model('activation_model');
+
+        $this->load->config('twilio');
+        $this->load->library('twilio');
     }
 
     public function index()
     {
+        // Logged-in Battle.net user: just add a new game account (bnetId#index), no full form needed
+        if ($this->user->isOnline() && $this->config->item('battle_net')) {
+            $this->addGameAccount();
+            return;
+        }
+
         clientLang("username_limit_length", "register");
         clientLang("username_limit", "register");
         clientLang("username_not_available", "register");
@@ -149,9 +160,24 @@ class Register extends MX_Controller
             $username = $this->input->post('register_username');
             $password = $this->input->post('register_password');
             $email = $this->input->post('register_email');
+            $phone = $this->twilio->normalize((string) $this->input->post('register_phone'));
 
             if (!$this->username_check($username)) {
                 die();
+            }
+
+            // SMS (Twilio): the phone must have been verified in this session
+            if ($this->twilio->enabled()) {
+                $verified = (string) \App\Config\Services::session()->get('reg_verified_phone');
+
+                if ($phone === '' || $verified === '' || $verified !== $phone) {
+                    die(lang('sms_not_verified', 'register'));
+                }
+
+                // One account per phone number
+                if ($this->phoneExists($phone)) {
+                    die(lang('sms_phone_in_use', 'register'));
+                }
             }
 
             // Show a success message
@@ -177,6 +203,16 @@ class Register extends MX_Controller
                 //Register our user.
                 $this->external_account_model->createAccount($username, $password, $email);
 
+                // Save the verified phone for this account (SMS login 2FA)
+                if ($this->twilio->enabled() && $phone !== '') {
+                    $accId = $this->external_account_model->getId($username);
+                    if ($accId) {
+                        $this->external_account_model->setPhoneByAccount($accId, $phone);
+                    }
+                    \App\Config\Services::session()->remove('reg_verified_phone');
+                    \App\Config\Services::session()->remove('reg_pending_phone');
+                }
+
                 Events::trigger('onCreateAccount', $username);
 
                 // Log in
@@ -188,6 +224,123 @@ class Register extends MX_Controller
 
             $this->template->view($this->template->box($title, $this->template->loadPage("register_success.tpl", $data)));
         }
+    }
+
+    /**
+     * Add an additional game account to the logged-in user's Battle.net account.
+     * No fields are requested; the account name is generated as "bnetId#index".
+     */
+    private function addGameAccount()
+    {
+        $info = $this->external_account_model->getBattlenetInfo($this->user->getId());
+
+        if (!$info) {
+            $this->template->view($this->template->box(
+                lang("register", "register"),
+                lang("gameaccount_no_bnet", "register"),
+                true
+            ));
+            return;
+        }
+
+        // Create on submit
+        if (count($_POST)) {
+            $new = $this->external_account_model->createGameAccount($info['bnet_id'], $info['email']);
+
+            Events::trigger('onCreateAccount', $new['username']);
+
+            $data = [
+                "url"     => $this->template->page_url,
+                "account" => $new['label'],
+                "email"   => $info['email'],
+            ];
+
+            $this->template->view($this->template->box(
+                lang("created", "register"),
+                $this->template->loadPage("register_gameaccount_success.tpl", $data)
+            ));
+            return;
+        }
+
+        // Show the simple "add game account" page with a preview of the next account name
+        $data = [
+            "url"        => $this->template->page_url,
+            "email"      => $info['email'],
+            "next_label" => $info['bnet_id'] . '#' . $this->external_account_model->getNextGameIndex($info['bnet_id']),
+        ];
+
+        $this->template->view($this->template->loadPage("page.tpl", [
+            "module"   => "default",
+            "headline" => lang("gameaccount_title", "register"),
+            "class"    => ["class" => "page_form"],
+            "content"  => $this->template->loadPage("register_gameaccount.tpl", $data),
+        ]));
+    }
+
+    /**
+     * Whether a (normalized) phone number is already registered to an account.
+     */
+    private function phoneExists(string $phone): bool
+    {
+        return $this->external_account_model->phoneInUse($phone);
+    }
+
+    /**
+     * AJAX: send an SMS verification code to the given phone (Twilio Verify).
+     */
+    public function sendCode()
+    {
+        if (!$this->input->is_ajax_request()) {
+            die('No direct script access allowed');
+        }
+        if (!$this->twilio->enabled()) {
+            die(json_encode(['ok' => false, 'error' => lang('sms_disabled', 'register')]));
+        }
+
+        $phone = $this->twilio->normalize((string) $this->input->post('phone'));
+
+        if (strlen(preg_replace('/\D/', '', $phone)) < 6) {
+            die(json_encode(['ok' => false, 'error' => lang('sms_bad_phone', 'register')]));
+        }
+
+        // One account per phone number
+        if ($this->phoneExists($phone)) {
+            die(json_encode(['ok' => false, 'error' => lang('sms_phone_in_use', 'register')]));
+        }
+
+        if (!$this->twilio->start($phone)) {
+            die(json_encode(['ok' => false, 'error' => lang('sms_send_failed', 'register')]));
+        }
+
+        \App\Config\Services::session()->set('reg_pending_phone', $phone);
+        die(json_encode(['ok' => true]));
+    }
+
+    /**
+     * AJAX: check the SMS code; on success marks the phone verified for this session.
+     */
+    public function verifyCode()
+    {
+        if (!$this->input->is_ajax_request()) {
+            die('No direct script access allowed');
+        }
+        if (!$this->twilio->enabled()) {
+            die(json_encode(['ok' => false]));
+        }
+
+        $phone = (string) \App\Config\Services::session()->get('reg_pending_phone');
+        $code  = (string) $this->input->post('code');
+
+        if ($phone === '' || $code === '') {
+            die(json_encode(['ok' => false, 'error' => lang('sms_required', 'register')]));
+        }
+
+        if (!$this->twilio->check($phone, $code)) {
+            die(json_encode(['ok' => false, 'error' => lang('sms_invalid', 'register')]));
+        }
+
+        \App\Config\Services::session()->set('reg_verified_phone', $phone);
+        die(json_encode(['ok' => true]));
     }
 
     public function email_check($email)

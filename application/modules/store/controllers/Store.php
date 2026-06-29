@@ -21,6 +21,7 @@ class Store extends MX_Controller
         $this->load->model("store_model");
 
         $this->load->config('store');
+        $this->load->config('sumup');
 
         requirePermission("view");
     }
@@ -40,6 +41,10 @@ class Store extends MX_Controller
         clientLang('checkout', 'store');
         clientLang('vp', 'store');
         clientLang('dp', 'store');
+        clientLang('sumup_pay', 'store');
+        clientLang('sumup_character_title', 'store');
+        clientLang('sumup_character_ph', 'store');
+        clientLang('empty_cart', 'store');
 
         // Gather the template data
         $data = [
